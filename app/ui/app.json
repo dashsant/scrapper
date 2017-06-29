@@ -565,5 +565,5 @@
      * Uniquely generated id for this application, used as prefix for localStorage keys.
      * Normally you should never change this value.
      */
-    "id": "8127d11a-3afc-4534-a274-550c298c924c"
+    "id": "619dec44-42ce-4bb6-86c2-2dd077bc5985"
 }

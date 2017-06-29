@@ -1,2 +1,2 @@
 // @tag full-page
-// @require /root/app/ui/app.js
+// @require /root/scrapper/app/ui/app.js
