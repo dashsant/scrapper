@@ -31,7 +31,7 @@ def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # 
 		else:
 			return
 	except Exception as e:
-		log_error("Error occured while opeing the url: " + url.encode('unicode_escape') + "\n")
+		log_error("Error occured while opeing the url: " + o.geturl() + "\n")
 #		logging.error("Error occured while opeing the url: " + url)
 		return
 
@@ -185,14 +185,14 @@ def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # 
 		siteDetail = document[key]
 
 	if result["tag_match"] == True:
-		siteDetail["key_match_count"] = siteDetail["key_match_count"] + 1
+		siteDetail["tag_match_count"] = siteDetail["tag_match_count"] + 1
 		#Only mark the URL's as visited if there is a tag match. This is to avoid the scenaatio of skipping
 		# the main website for every successive run
 		mark_url_visited(url , db)
 	
 	if result["keyword_match"] == True:
 		log_result(url)
-		siteDetail["tag_match_count"] = siteDetail["tag_match_count"] + 1 
+		siteDetail["key_match_count"] = siteDetail["key_match_count"] + 1 
 		urlDetail = {}
 		urlDetail["link"] = url
 		urlDetail["headline"] = result["headline"]
