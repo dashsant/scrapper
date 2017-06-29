@@ -1,0 +1,12 @@
+{
+    "name": "newsscraper-api",
+    "main": "web_server.js",
+    "version":"1.0.0",
+    "dependencies": {
+        "express": "4.15.3",
+        "mongodb": "2.2.27",
+        "body-parser": "1.17.2",
+	"node-cleanup": "2.1.2",
+	"node-datetime": "1.0.1"
+    }
+}
