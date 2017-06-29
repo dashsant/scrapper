@@ -11,21 +11,25 @@ import traceback
 import pymongo
 from pymongo import MongoClient
 import time
+import sys
 
 # recursively search starting from the root URL
-def searchUrl(url, level, keywords, rootUrl , urlListVisited , document): # the root URL is level 0
+def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # the root URL is level 0
     # do not go to other websites
 	o = urlparse(url)
 	if  o.netloc != rootUrl:
 		return
 
-	if url in urlListVisited: # prevent using the same URL again
+	if url in urlListProbed: # prevent using the same URL again
 		return
 
 	try:
-		urlListVisited.append(url)
-		req = urllib.request.Request(url , headers={'User-Agent': 'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11'})
-		urlContent = urllib.request.urlopen(req).read()
+		urlListProbed.append(url)
+		if is_url_visited(url , db) == False:
+			req = urllib.request.Request(url , headers={'User-Agent': 'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11'})
+			urlContent = urllib.request.urlopen(req).read()
+		else:
+			return
 	except Exception as e:
 		log_error("Error occured while opeing the url: " + url.encode('unicode_escape') + "\n")
 #		logging.error("Error occured while opeing the url: " + url)
@@ -168,18 +172,23 @@ def searchUrl(url, level, keywords, rootUrl , urlListVisited , document): # the 
 	elif rootUrl == 'postcard.news':
 		result = searchPostcardNews(soup , keywords)		
 		
+	#"." is not a valid for field name in mongo
+	key = rootUrl.replace("." , "_")
 	# Check if the key for this rootUrl exist
-	if rootUrl not in document:
+	if key not in document:
 		siteDetail = {}
 		siteDetail["key_match_count"] = 0
 		siteDetail["tag_match_count"] = 0
 		siteDetail["children"] = []
-		document[rootUrl] = siteDetail
+		document[key] = siteDetail
 	else:
-		siteDetail = document[rootUrl]
+		siteDetail = document[key]
 
 	if result["tag_match"] == True:
 		siteDetail["key_match_count"] = siteDetail["key_match_count"] + 1
+		#Only mark the URL's as visited if there is a tag match. This is to avoid the scenaatio of skipping
+		# the main website for every successive run
+		mark_url_visited(url , db)
 	
 	if result["keyword_match"] == True:
 		log_result(url)
@@ -197,7 +206,7 @@ def searchUrl(url, level, keywords, rootUrl , urlListVisited , document): # the 
 			for linkTag in linkTags:
 				try:
 					linkUrl = linkTag['href']
-					searchUrl(linkUrl, level - 1, keywords , rootUrl , urlListVisited , document)
+					searchUrl(linkUrl, level - 1, keywords , rootUrl , urlListProbed , document , db)
 				except:
 					pass
 
@@ -582,46 +591,90 @@ def log_result(result_str):
 def init_result():
 	result = {"keyword_match":False , "tag_match":False , "headline" : "" , "author" : ""}
 	return result
-# main
-curtime = datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
-log_error(curtime)
 
-k = open("news_keyword.txt" , "r")
-keywords = []
-for line in k:
-	t = line.strip()
-	if len(t) > 0:
-		keywords.append(" "+ t +" ")
-k.close()
+def get_keywords():
+	k = open("news_keyword.txt" , "r")
+	keywords = []
+	for line in k:
+		t = line.strip()
+		if len(t) > 0:
+			keywords.append(" "+ t +" ")
+	k.close()
+	return keywords
 
-log_result(curtime)
-# initialize the document that needs to be written to the database
-pattern = "%B-%d-%Y"
-document = {}
-date_as_string = datetime.datetime.now().strftime(pattern)
-date_as_epoch = int(time.mktime(time.strptime(date_as_string, pattern)))
-document["_id"] = date_as_epoch
-document["date_as_string"] = date_as_string
-f = open("news_websites.txt" , "r")
-for line in f:
-	print("Processing " + line + "\n")
-	rUrl = line.strip()
-	o = urlparse(rUrl)
-	list = []
-	searchUrl(rUrl, 1, keywords, o.netloc , list , document)
-f.close()
-
-print(document)
-
-#Write the document to mongo db.
-try:
-	client = MongoClient()
-	db = client["news_scraper"]
-	collection = db["scraping_result"]
-	collection.replace_one({"_id":document["_id"]} , document, upsert=True)
-	client.close()
-except:
-	traceback.print_exc()
+def init_document():
+	pattern = "%B-%d-%Y on %B %d, %Y"
+	document = {}
+	date_as_string = datetime.datetime.now().strftime(pattern)
+	date_as_epoch = int(time.time())
+	document["_id"] = date_as_epoch
+	document["date_as_string"] = date_as_string
+	return document
 	
-curtime = datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
-log_result(curtime)
+# main
+def main():
+	keywords = get_keywords()
+	document = init_document()
+	#initialize database
+	try:
+		client = MongoClient()
+		db = client["news_scraper"]
+	except:
+		traceback.print_exc()
+	
+	if len(sys.argv) > 1 :
+		rUrl = sys.argv[1].strip()
+		o = urlparse(rUrl)
+		list = []
+		searchUrl(rUrl, 1, keywords, o.netloc , list , document , db)
+		print(document)
+		return
+
+	curtime = datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
+	log_error(curtime)
+
+	log_result(curtime)
+	# initialize the document that needs to be written to the database
+	document = init_document()
+	f = open("news_websites.txt" , "r")
+	for line in f:
+		print("Processing " + line + "\n")
+		rUrl = line.strip()
+		o = urlparse(rUrl)
+		list = []
+		searchUrl(rUrl, 1, keywords, o.netloc , list , document , db)
+	f.close()
+	curtime = datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
+	log_result(curtime)
+	print(document)
+	save_result(document , db)
+	client.close()
+
+def save_result(document , db):
+	#Write the document to mongo db.
+	try:
+		collection = db["scraping_result"]
+		collection.replace_one({"_id":document["_id"]} , document, upsert=True)
+	except:
+		traceback.print_exc()
+
+def is_url_visited(url , db):
+	res = False
+	try:
+		collection = db["visited_url"]
+		if collection.find_one({"_id":url}) is not None:
+			res = True
+	except:
+		traceback.print_exc()
+	
+	return res
+
+def mark_url_visited(url , db):
+	try:
+		collection = db["visited_url"]
+		collection.insert_one({"_id":url} , {"visited":"True"})
+	except:
+		traceback.print_exc()
+
+
+main()
