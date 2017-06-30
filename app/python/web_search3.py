@@ -12,6 +12,7 @@ import pymongo
 from pymongo import MongoClient
 import time
 import sys
+import config
 
 # recursively search starting from the root URL
 def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # the root URL is level 0
@@ -29,10 +30,11 @@ def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # 
 			req = urllib.request.Request(url , headers={'User-Agent': 'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11'})
 			urlContent = urllib.request.urlopen(req).read()
 		else:
+			print("url already visited : " + o.geturl())
 			return
+
 	except Exception as e:
-		log_error("Error occured while opeing the url: " + o.geturl() + "\n")
-#		logging.error("Error occured while opeing the url: " + url)
+		logging.getLogger().exception(o.geturl())
 		return
 
 	soup = BeautifulSoup(urlContent, "lxml")
@@ -225,7 +227,7 @@ def searchIndianExpress(soup , keywords):
 				result["author"] = result["author"].replace("\n" , " ")
 				result["author"] = result["author"].replace("\t" , "")
 	except:
-		traceback.print_exc()
+		logging.getLogger().exception("")
 	return result
 	
 def searchTheHindu(soup , keywords):
@@ -243,13 +245,13 @@ def searchTheHindu(soup , keywords):
 					result["keyword_match"] = True
 					return result
 	except:
-		traceback.print_exc()
+		logging.getLogger().exception("")
 	return result
 				
 def searchTOI(soup , keywords):
 	result = init_result()
 	try:
-		schema = soup.find("html" , itemtype='http://schema.org/NewsArticle')
+		schema = soup.find("html" , itemtype='https://schema.org/NewsArticle')
 		if schema is not None:
 			result["tag_match"] = True
 			content_text = (soup.find("div" ,  itemprop="articleBody")).get_text()
@@ -258,7 +260,7 @@ def searchTOI(soup , keywords):
 					result["keyword_match"] = True
 					break
 	except:
-		traceback.print_exc()
+		logging.getLogger().exception("")
 	return result
 
 def searchANINews(soup , keywords):
@@ -272,7 +274,7 @@ def searchANINews(soup , keywords):
 				if(content_text.find(searchText)) > -1 :
 					result["keyword_match"] = True
 	except:
-		traceback.print_exc()
+		logging.getLogger().exception("")
 	return result
 	
 def searchNewindianexpress(soup , keywords):
@@ -294,7 +296,7 @@ def searchPage(soup , keywords , elementTag , filters , lengthCheck=None):
 			if genSearchParagraph(paragraphs , keywords) is not None:
 				result["keyword_match"] = True
 	except:
-		traceback.print_exc()
+		logging.getLogger().exception("")
 	return result
 
 # Does not get the paragraph, rather searches the elements itself
@@ -310,7 +312,7 @@ def searchPage1(soup , keywords , elementTag , filters):
 			if genSearchParagraph(content , keywords) is not None:
 				result["keyword_match"] = True
 	except:
-		traceback.print_exc()
+		logging.getLogger().exception("")
 	return result
 
 def searchPage2(soup , keywords , elementTag , filters , paragraphFilterText):
@@ -327,7 +329,7 @@ def searchPage2(soup , keywords , elementTag , filters , paragraphFilterText):
 			if genSearchParagraph(paragraphs , keywords) is not None:
 				result["keyword_match"] = True
 	except:
-		traceback.print_exc()
+		logging.getLogger().exception("")
 	return result
 	
 def searchPage4(soup , keywords , elementTag , filters ):
@@ -345,7 +347,7 @@ def searchPage4(soup , keywords , elementTag , filters ):
 			if genSearchParagraph(content , keywords) is not None:
 				result["keyword_match"] = True
 	except:
-		traceback.print_exc()
+		logging.getLogger().exception("")
 	return result
 	
 def searchZeeNews(soup , keywords):
@@ -611,27 +613,36 @@ def init_document():
 	document["date_as_string"] = date_as_string
 	return document
 	
+def init_logging():
+	logging.basicConfig(level=logging.DEBUG,
+                    filename='error.log',
+                    filemode='w')
+	logging.getLogger().setLevel(logging.ERROR)
 # main
 def main():
 	keywords = get_keywords()
 	document = init_document()
+	init_logging()
 	#initialize database
 	try:
 		client = MongoClient()
 		db = client["news_scraper"]
 	except:
-		traceback.print_exc()
-	
+		logging.getLogger().exception("Mongd exception")	
 	if len(sys.argv) > 1 :
-		rUrl = sys.argv[1].strip()
-		o = urlparse(rUrl)
-		list = []
-		searchUrl(rUrl, 1, keywords, o.netloc , list , document , db)
-		print(document)
-		return
+		mode = sys.argv[1].strip()
+		if mode == "test":
+			config.mode = "test"
+			config.url_visited_check = False
+			if len(sys.argv) > 2 and sys.argv[2] is not None and sys.argv[2] == "-f":
+				rUrl = sys.argv[3].strip()
+				o = urlparse(rUrl)
+				list = []
+				searchUrl(rUrl, 1, keywords, o.netloc , list , document , db)
+				print(document)
+				return
 
 	curtime = datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
-	log_error(curtime)
 
 	log_result(curtime)
 	# initialize the document that needs to be written to the database
@@ -656,17 +667,18 @@ def save_result(document , db):
 		collection = db["scraping_result"]
 		collection.replace_one({"_id":document["_id"]} , document, upsert=True)
 	except:
-		traceback.print_exc()
+		logging.getLogger().exception("")
 
 def is_url_visited(url , db):
 	res = False
+	if config.url_visited_check == False:
+		return False
 	try:
 		collection = db["visited_url"]
 		if collection.find_one({"_id":url}) is not None:
 			res = True
 	except:
-		traceback.print_exc()
-	
+		logging.getLogger().exception("")	
 	return res
 
 def mark_url_visited(url , db):
@@ -674,7 +686,6 @@ def mark_url_visited(url , db):
 		collection = db["visited_url"]
 		collection.insert_one({"_id":url} , {"visited":"True"})
 	except:
-		traceback.print_exc()
-
+		logging.getLogger().exception("")
 
 main()
