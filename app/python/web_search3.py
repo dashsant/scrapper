@@ -363,13 +363,13 @@ def searchHindustanTimes(soup , keywords):
 	return searchPage(soup , keywords , "div" , {"class": 'story-details' , "itemprop":"articlebody" })
 
 def searchTheGuardian(soup , keywords):
-	return searchPage(soup , keywords , "div" , {"itemprop":"articlebody" })
+	return searchPage(soup , keywords , "div" , {"itemprop":"articleBody" })
 	
 def searchNDTV(soup , keywords):
-	return searchPage(soup , keywords , "div" , {"itemprop":"articlebody" })
+	return searchPage(soup , keywords , "div" , {"itemprop":"articleBody" })
 
 def searchMidDay(soup , keywords):
-	return searchPage(soup , keywords , "span" , {"itemprop":"articlebody" })
+	return searchPage(soup , keywords , "span" , {"itemprop":"articleBody" })
 	
 def searchNews18(soup , keywords):
 	return searchPage1(soup , keywords , "div" , {"id":"article_body" })
@@ -378,7 +378,7 @@ def searchOpIndia(soup , keywords):
 	return searchPage(soup , keywords , "div" , {"id":"content-main" })
 
 def searchLiveMint(soup , keywords):
-	return searchPage(soup , keywords , "div" , {"class":"story-content" })
+	return searchPage(soup , keywords , None , {"id":"main-content" })
 
 def searchSirfNews(soup , keywords):
 	return searchPage(soup , keywords , "div" , {"class":"td-post-content" })
@@ -528,7 +528,7 @@ def searchNacHindTimes(soup , keywords):
 	return result		
 
 def searchMorungExpress(soup , keywords):
-	searchPage2(soup , keywords , None , {"id":"main2"  } , 'class="meta_permalink">')
+	return searchPage2(soup , keywords , None , {"id":"main2"  } , 'class="meta_permalink">')
 	
 def searchNewsTodayNet(soup , keywords):
 	return searchPage(soup , keywords , "div" , {"itemprop":"articleBody" } )
