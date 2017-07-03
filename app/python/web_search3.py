@@ -13,12 +13,14 @@ from pymongo import MongoClient
 import time
 import sys
 import config
+import re
 
 # recursively search starting from the root URL
 def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # the root URL is level 0
     # do not go to other websites
 	o = urlparse(url)
-	if  o.netloc != rootUrl:
+	logging.getLogger().info(o.geturl())
+	if  o.netloc.find(rootUrl) < 0:
 		return
 
 	if url in urlListProbed: # prevent using the same URL again
@@ -57,9 +59,9 @@ def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # 
 		result = searchNewindianexpress(soup , keywords)
 	elif rootUrl == 'zeenews.india.com':
 		result = searchZeeNews(soup , keywords)
-	elif rootUrl == 'dnaindia.com':
+	elif rootUrl.find('dnaindia.com') >=0 :
 		result = searchDNAIndia(soup , keywords)
-	elif rootUrl == 'www.sunday-guardian.com':
+	elif rootUrl == 'www.sundayguardianlive.com':
 		result = searchSundayGuardin(soup , keywords)
 	elif rootUrl == 'www.hindustantimes.com':
 		result = searchHindustanTimes(soup , keywords)
@@ -75,11 +77,11 @@ def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # 
 		result = searchOpIndia(soup , keywords)
 	elif rootUrl == 'www.livemint.com':
 		result = searchLiveMint(soup , keywords)
-	elif rootUrl == 'sirfnews.com':
+	elif rootUrl == 'www.sirfnews.com':
 		result = searchSirfNews(soup , keywords)
-	elif rootUrl == 'in.reuters.com':
+	elif rootUrl.find('in.reuters.com') >= 0:
 		result = searchReuters(soup , keywords)
-	elif rootUrl == 'swarajyamag.com':
+	elif rootUrl.find('swarajyamag.com') >= 0:
 		result = searchSwarajya(soup , keywords)
 	elif rootUrl == 'currentriggers.com':
 		result = searchCurrentRiggers(soup , keywords)
@@ -87,7 +89,7 @@ def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # 
 		result = searchSatyaVijayi(soup , keywords)
 	elif rootUrl == 'www.hindupost.in':
 		result = searchHinduPost(soup , keywords)
-	elif rootUrl == 'www.simplecapacity.com':
+	elif rootUrl.find('simplecapacity.com') >= 0:
 		result = searchSimpleCapacity(soup , keywords)
 	elif rootUrl == 'www.worldreligionnews.com':
 		result = searchWorldReligionNews(soup , keywords)
@@ -111,7 +113,7 @@ def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # 
 		result = searchDeccanChronicle(soup , keywords)	
 	elif rootUrl == 'business-standard.com':
 		result = searchBusinessStandard(soup , keywords)
-	elif rootUrl == 'thehindubusinessline.com':
+	elif rootUrl.find('thehindubusinessline.com') >=0 :
 		result = searchHinduBusinessLine(soup , keywords)	
 	elif rootUrl == 'telegraphindia.com':
 		result = searchTelegraph(soup , keywords)	
@@ -172,8 +174,11 @@ def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # 
 	elif rootUrl == 'dharmatoday.com':
 		result = searchDharmaToday(soup , keywords)
 	elif rootUrl == 'postcard.news':
-		result = searchPostcardNews(soup , keywords)		
-		
+		result = searchPostcardNews(soup , keywords)
+	else:
+		print("This speicific Site is yet to be implemented " + rootUrl)	
+		return
+	
 	#"." is not a valid for field name in mongo
 	key = rootUrl.replace("." , "_")
 	# Check if the key for this rootUrl exist
@@ -208,6 +213,11 @@ def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # 
 			for linkTag in linkTags:
 				try:
 					linkUrl = linkTag['href']
+					if linkUrl.startswith("http") == False:
+						if linkUrl[0] == '/':
+							linkUrl = o.scheme + "://" + rootUrl + linkUrl
+						else:
+							linkUrl = o.scheme + "://" + rootUrl +"/"+ linkUrl
 					searchUrl(linkUrl, level - 1, keywords , rootUrl , urlListProbed , document , db)
 				except:
 					pass
@@ -297,6 +307,8 @@ def searchPage(soup , keywords , elementTag , filters , lengthCheck=None):
 				result["keyword_match"] = True
 	except:
 		logging.getLogger().exception("")
+	s = "elementTag: " + str(elementTag) + " filters: " + str(filters) + " lengthCheck:" + str(lengthCheck)
+	logging.getLogger().info(s)
 	return result
 
 # Does not get the paragraph, rather searches the elements itself
@@ -317,6 +329,9 @@ def searchPage1(soup , keywords , elementTag , filters):
 
 def searchPage2(soup , keywords , elementTag , filters , paragraphFilterText):
 	result = init_result()
+	s = "elementTag: " + str(elementTag) + " filters: " + str(filters) + " paragraphFilterText:" + str(paragraphFilterText)
+	logging.getLogger().info(s)
+
 	try:
 		if isinstance(filters , dict) :
 			content = soup.find_all(elementTag , filters)
@@ -384,7 +399,7 @@ def searchSirfNews(soup , keywords):
 	return searchPage(soup , keywords , "div" , {"class":"td-post-content" })
 
 def searchReuters(soup , keywords):
-	return searchPage(soup , keywords , "span" , {"class":"article-text" })
+	return searchPage(soup , keywords , "div" , {"class":re.compile("PrimaryAsset_container") })
 
 def searchSwarajya(soup , keywords):
 	return searchPage(soup , keywords , None , "div.story-element.story-element-text")
@@ -632,13 +647,14 @@ def main():
 	if len(sys.argv) > 1 :
 		mode = sys.argv[1].strip()
 		if mode == "test":
+			logging.getLogger().setLevel(logging.INFO)
 			config.mode = "test"
 			config.url_visited_check = False
 			if len(sys.argv) > 2 and sys.argv[2] is not None and sys.argv[2] == "-f":
 				rUrl = sys.argv[3].strip()
 				o = urlparse(rUrl)
 				list = []
-				searchUrl(rUrl, 1, keywords, o.netloc , list , document , db)
+				searchUrl(rUrl, 2, keywords, o.netloc , list , document , db)
 				print(document)
 				return
 
@@ -682,6 +698,8 @@ def is_url_visited(url , db):
 	return res
 
 def mark_url_visited(url , db):
+	if config.url_visited_check == False:
+		rerurn
 	try:
 		collection = db["visited_url"]
 		collection.insert_one({"_id":url} , {"visited":"True"})

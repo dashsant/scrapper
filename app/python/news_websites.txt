@@ -5,7 +5,7 @@ http://timesofindia.indiatimes.com/
 http://zeenews.india.com/
 http://indianexpress.com
 http://dnaindia.com
-http://www.sundayguardian.com
+http://www.sundayguardianlive.com
 http://www.hindustantimes.com
 http://www.theguardian.com
 http://www.ndtv.com/
@@ -19,7 +19,7 @@ http://swarajyamag.com
 http://currentriggers.com
 http://satyavijayi.com
 http://www.hindupost.in
-http://www.simplecapacity.com
+http://simplecapacity.com
 http://www.worldreligionnews.com
 http://worldhindunews.com/
 http://www.dailyo.in
