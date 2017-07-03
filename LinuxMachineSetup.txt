@@ -1,0 +1,57 @@
+Linux Installation:
+http://denver.gaminghost.co/7/isos/x86_64/CentOS-7-x86_64-Minimal-1611.iso 
+yum group install "Development Tools"
+yum install wget
+yum install openssl-devel
+yum install bzip2-devel
+
+
+Python Installation:
+wget https://www.python.org/ftp/python/3.6.1/Python-3.6.1.tgz
+tar xzf Python-3.6.1.tgz
+cd Python-3.6.1
+./configure
+make altinstall
+pip3 install lxml
+pip3 install pymongo
+pip3 install beautifulsoup4
+yum install ncurses-devel
+pip3 install git+https://github.com/ludwigschwardt/python-gnureadline.git
+
+
+
+
+Node JS Installation:
+yum install epel-release
+yum install nodejs
+
+
+Sencha Installation
+mkdir /opt/sencha
+unzip SenchaCmd-6.2.2-linux-amd64.sh.zip
+SenchaCmd-6.2.2.36-linux-amd64.sh -q -dir "/opt/sencha"
+
+Mongodb Installation
+https://docs.mongodb.com/manual/tutorial/install-mongodb-on-red-hat/
+o install the packages from an earlier release series, such as 2.4 or 2.6, you can specify the release series in the repository configuration. For example, to restrict your system to the 2.6 release series, create a /etc/yum.repos.d/mongodb-org-2.6.repo file to hold the following configuration information for the MongoDB 2.6 repository:
+Copy
+
+[mongodb-org-2.6]
+name=MongoDB 2.6 Repository
+baseurl=http://downloads-distro.mongodb.org/repo/redhat/os/x86_64/
+gpgcheck=0
+enabled=1
+yum install mongodb-org
+Disable SELinux by setting the SELINUX setting to disabled in /etc/selinux/config.
+SELINUX=disabled
+service mongod start
+chkconfig mongod on
+
+Java install
+yum install java-1.8.0-openjdk
+
+Disable Firewall:
+https://linuxconfig.org/how-to-stop-start-and-disable-enable-firewall-on-redhat-7-linux-system
+systemctl disable firewalld
+
+
