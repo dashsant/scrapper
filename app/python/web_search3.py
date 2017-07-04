@@ -246,14 +246,14 @@ def searchTheHindu(soup , keywords):
 		t = soup.find("div",class_="article-topics-container")
 		if t is not None:
 			result["tag_match"] = True
-		paragraphs = soup.find_all("p")
-		for p in paragraphs:
-			if len(p.attrs) > 0:
-				continue
-			for searchText in keywords:
-				if(p.get_text().find(searchText)) > -1 :
-					result["keyword_match"] = True
-					return result
+			paragraphs = soup.find_all("p")
+			for p in paragraphs:
+				if len(p.attrs) > 0:
+					continue
+				for searchText in keywords:
+					if(p.get_text().find(searchText)) > -1 :
+						result["keyword_match"] = True
+						return result
 	except:
 		logging.getLogger().exception("")
 	return result
@@ -435,7 +435,7 @@ def searchHinduHumanRights(soup , keywords):
 	return searchPage2(soup , keywords , "div" , {"class":"single-content" } , '<p><a href="http://www.opindia.com/">')
 
 def searchHinduJagruti(soup , keywords):
-	return searchPage(soup , keywords , "div" , {"class":"entry-content" })
+	return searchPage(soup , keywords , "div" , {"id":"content" , "role":"main" , "class":"site-content" })
 
 def searchMediaCrooks(soup , keywords):
 	return searchPage(soup , keywords , "div" , {"class":"MsoNormal" })
