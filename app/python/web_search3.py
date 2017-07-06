@@ -28,6 +28,8 @@ def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # 
 
 	try:
 		urlListProbed.append(url)
+		if config.mode == "test":
+			print("Processing URL: " + o.geturl())
 		if is_url_visited(url , db) == False:
 			req = urllib.request.Request(url , headers={'User-Agent': 'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11'})
 			urlContent = urllib.request.urlopen(req).read()
@@ -175,6 +177,8 @@ def searchUrl(url, level, keywords, rootUrl , urlListProbed , document , db): # 
 		result = searchDharmaToday(soup , keywords)
 	elif rootUrl == 'postcard.news':
 		result = searchPostcardNews(soup , keywords)
+	elif rootUrl == 'www.thehansindia.com':
+                result = searchHansIndia(soup , keywords)
 	else:
 		print("This speicific Site is yet to be implemented " + rootUrl)	
 		return
@@ -393,7 +397,7 @@ def searchOpIndia(soup , keywords):
 	return searchPage(soup , keywords , "div" , {"id":"content-main" })
 
 def searchLiveMint(soup , keywords):
-	return searchPage(soup , keywords , None , {"id":"main-content" })
+	return searchPage(soup , keywords , "div" , {"class":"content-box" })
 
 def searchSirfNews(soup , keywords):
 	return searchPage(soup , keywords , "div" , {"class":"td-post-content" })
@@ -411,7 +415,7 @@ def searchSatyaVijayi(soup , keywords):
 	return searchPage(soup , keywords , "div" , {"class":"td-post-content" })
 
 def searchHinduPost(soup , keywords):
-	return searchPage2(soup , keywords , "div" , {"id":"main-content" } , "and help pay for our journalism")
+	return searchPage2(soup , keywords , "div" , {"id":"main-content" , "class":"mh-content"} , "and help pay for our journalism")
 
 def searchSimpleCapacity(soup , keywords):	
 	return searchPage2(soup , keywords , "div" , {"id":"content-main" } , "Your email address will not be published")
@@ -435,10 +439,13 @@ def searchHinduHumanRights(soup , keywords):
 	return searchPage2(soup , keywords , "div" , {"class":"single-content" } , '<p><a href="http://www.opindia.com/">')
 
 def searchHinduJagruti(soup , keywords):
-	return searchPage(soup , keywords , "div" , {"id":"content" , "role":"main" , "class":"site-content" })
+	if len(soup.select("body.news-template-default.single.single-news" )) == 1:
+		return searchPage(soup , keywords , "div" , {"id":"content" , "role":"main" , "class":"site-content" })
+	else:
+		return init_result()
 
 def searchMediaCrooks(soup , keywords):
-	return searchPage(soup , keywords , "div" , {"class":"MsoNormal" })
+	return searchPage(soup , keywords , None , "div.post-body.entry-content" , 1)
 	
 def searchDeccanHerald(soup , keywords):
 	return searchPage(soup , keywords , "div" , {"class":"newsText" },1)
@@ -524,10 +531,13 @@ def searchDailyPioneer(soup , keywords):
 	return searchPage(soup , keywords , "span" , {"itemprop":"articleBody" } )
 	
 def searchStateTimes(soup , keywords):
-	return searchPage(soup , keywords , "div" , {"class":"pf-content" } )
+	if len(soup.select("div.mom-post-meta.single-post-meta")) == 1:
+		return searchPage(soup , keywords , "div" , {"class":"pf-content" } )
+	else:
+		return init_result()
 
 def searchStarOfMysore(soup , keywords):
-	return searchPage(soup , keywords , "div" , {"class":"entry-content" } )
+	return searchPage(soup , keywords , "div" , {"class":"entry-content" } , 1 )
 
 def searchNacHindTimes(soup , keywords):
 	result = init_result()
@@ -574,6 +584,9 @@ def	searchDharmaToday(soup , keywords):
 
 def searchPostcardNews(soup , keywords):
 	return searchPage(soup , keywords , "article" , {} )
+
+def searchHansIndia(soup , keywords):
+	return searchPage(soup , keywords , None , "div.fullwidth.pull-left.artical-panel" )
 	
 def genSearchParagraph(elements , keywords):
 	for p in elements:
@@ -592,15 +605,14 @@ def filterParagraphs(paragraphs , searchText):
 	return newp
 
 def log_error(error_str):
-	err_log_f = open("error.log" , "a+")
+	err_log_f = open(config.error_file , "a+")
 	err_log_f.write(error_str)
 	err_log_f.write("\n")
 	err_log_f.close()	
 	
 #done to truncate the result file before the run.
-open("result.txt" , "w").close()
 def log_result(result_str):
-	f = open("result.txt" , "a+")
+	f = open(config.result_file , "a+")
 	f.write(result_str)
 	f.write("\n")
 	f.close()
@@ -630,7 +642,7 @@ def init_document():
 	
 def init_logging():
 	logging.basicConfig(level=logging.DEBUG,
-                    filename='error.log',
+                    filename=config.error_file,
                     filemode='w')
 	logging.getLogger().setLevel(logging.ERROR)
 # main
@@ -649,17 +661,19 @@ def main():
 		if mode == "test":
 			logging.getLogger().setLevel(logging.INFO)
 			config.mode = "test"
-			config.url_visited_check = False
-			if len(sys.argv) > 2 and sys.argv[2] is not None and sys.argv[2] == "-f":
-				rUrl = sys.argv[3].strip()
+			if  sys.argv[2] == "skip":
+				config.url_visited_check = False
+			if len(sys.argv) > 3 and sys.argv[3] is not None and sys.argv[3] == "-f":
+				rUrl = sys.argv[4].strip()
 				o = urlparse(rUrl)
 				list = []
-				searchUrl(rUrl, 2, keywords, o.netloc , list , document , db)
+				searchUrl(rUrl, 3, keywords, o.netloc , list , document , db)
 				print(document)
 				return
 
 	curtime = datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
 
+	open(config.result_file , "w").close()
 	log_result(curtime)
 	# initialize the document that needs to be written to the database
 	document = init_document()
@@ -675,7 +689,7 @@ def main():
 	log_result(curtime)
 	print(document)
 	save_result(document , db)
-	client.close()
+	#client.close()
 
 def save_result(document , db):
 	#Write the document to mongo db.
