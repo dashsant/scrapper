@@ -622,7 +622,7 @@ def init_result():
 	return result
 
 def get_keywords():
-	k = open("news_keyword.txt" , "r")
+	k = open(config.keywords , "r")
 	keywords = []
 	for line in k:
 		t = line.strip()
@@ -632,7 +632,7 @@ def get_keywords():
 	return keywords
 
 def init_document():
-	pattern = "%B-%d-%Y on %B %d, %Y"
+	pattern = "%B-%d-%Y"
 	document = {}
 	date_as_string = datetime.datetime.now().strftime(pattern)
 	date_as_epoch = int(time.time())
@@ -677,7 +677,7 @@ def main():
 	log_result(curtime)
 	# initialize the document that needs to be written to the database
 	document = init_document()
-	f = open("news_websites.txt" , "r")
+	f = open(config.websites , "r")
 	for line in f:
 		print("Processing " + line + "\n")
 		rUrl = line.strip()
