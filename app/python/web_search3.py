@@ -683,7 +683,7 @@ def main():
 		rUrl = line.strip()
 		o = urlparse(rUrl)
 		list = []
-		searchUrl(rUrl, 1, keywords, o.netloc , list , document , db)
+		searchUrl(rUrl, 2, keywords, o.netloc , list , document , db)
 	f.close()
 	curtime = datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
 	log_result(curtime)
