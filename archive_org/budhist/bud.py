@@ -12,6 +12,7 @@ import sys
 import re
 import os
 import subprocess
+import img2pdf
 
 
 def get_download_metadata(id):
@@ -66,27 +67,84 @@ def get_image_urls(data):
 		
 	return imageUrls
 
-def fetchImages(id, dirName , urls, imageFormat, head):
-	tmp = dirName + id + "/"
-	print(id)
-	print (tmp)
-	if not os.path.exists(tmp):
-		os.mkdir(tmp)
+def fetchImages(id, dirName , urls, imageFormat, head ):
 	pageNo = 1
+	files = []
+	missing_img = []
 	for url in urls:
-		file_path = tmp + "page-" + str(pageNo) + "." + imageFormat
+		file_path = dirName + "page-" + str(pageNo) + "." + imageFormat
 		pageNo = pageNo + 1
-		req = urllib.request.Request(url , headers=head)
-		content = urllib.request.urlopen(req).read()
-		time.sleep(1)
-		with open(file_path , "wb") as f:
-			f.write(content)
-		
+		try:
+			req = urllib.request.Request(url , headers=head)
+			content = urllib.request.urlopen(req).read()
+			#time.sleep(1)
+			with open(file_path , "wb") as f:
+				f.write(content)
+			files.append(file_path)
+		except:
+			missing_img.append(file_path)
+			print("Exception for " + file_path)
+	with open(dirName +"image_files.json" , "w") as fw:
+		json.dump(files , fw)
+	if len(missing_img) > 0:
+		with open(dirName +"mising_image_files.json" , "w") as fw:
+			json.dump(missing_img , fw)
+	if len(files) > 0:
+		storePDFFiles(files, dirName , id)
+		zipCmd = "zip -r " + id + ".zip " + dirName
+		subprocess.call(zipCmd , shell=True)
+		cmd = "gdrive upload --parent 1iRJtGw4X-hT-PB7oR9khW270KqIqLC-1    " + id + ".zip"
+		subprocess.call(cmd , shell=True)
+		rmZipFileCmd = "rm " + id + ".zip"
+		subprocess.call(rmZipFileCmd  , shell=True)
+
+def storePDFFiles(files , dirName , id) :
+	noOfParts = int(len(files)/100)
+	if (len(files) % 100) > 0:
+		noOfParts = noOfParts + 1
+	for i in range(1 , noOfParts + 1):
+		st = (i-1) * 100
+		end = i * 100 
+		if(len(files) < end):
+			end = len(files)
+		pdfImgFileNames = []
+		for j in range(st , end):
+			pdfImgFileNames.append(files[j])
+		print(pdfImgFileNames[len(pdfImgFileNames) -1])
+		pdf_bytes = img2pdf.convert(pdfImgFileNames )
+		pdfFileName = dirName + id + "-part-"+str(i) + ".pdf"
+		print(pdfFileName )
+		with open(pdfFileName , "wb") as fpdf:
+			fpdf.write(pdf_bytes)
+		cmd = "gdrive upload --parent 1iRJtGw4X-hT-PB7oR9khW270KqIqLC-1    " + pdfFileName
+		subprocess.call(cmd , shell=True)
+
+def uploadFolders():
+	folderName = sys.argv[1]
+	id = sys.argv[2]
+	fileNames = []
+	for file in os.listdir(folderName):
+		if file.find(".jp2") > 0:
+			fileNames.append(file)
+	sortedFileNames = []
+	for i in range(1 , len(fileNames) + 1):
+		tmp = folderName + "page-" + str(i) + ".jp2"
+		if os.path.isfile(tmp):
+			sortedFileNames.append(tmp)
+	storePDFFiles(sortedFileNames , folderName , id)
+	zipCmd = "zip -r " + id + ".zip " + folderName
+	subprocess.call(zipCmd , shell=True)
+	cmd = "gdrive upload --parent 1iRJtGw4X-hT-PB7oR9khW270KqIqLC-1    " + id + ".zip"
+	subprocess.call(cmd , shell=True)
+	rmZipFileCmd = "rm " + id + ".zip"
+	subprocess.call(rmZipFileCmd  , shell=True)
+			
 def main():
 	# load the file
 	# read ids
 	#
 	f = open("budhist_collection.txt" , "r")
+	#fmsg = open("scrapper.log" , "w+")
 	start = int(sys.argv[1])
 	finish = int(sys.argv[2])
 	baseFolder = sys.argv[3]
@@ -95,12 +153,27 @@ def main():
 	for id in f:
 		id = id.strip()
 		if cnt < start:
+			cnt = cnt + 1
 			continue
 		if cnt > finish :
+			print("finished all")
 			break
+		
 		data , head = get_download_metadata(id)
+		dirName = baseFolder + id + "/"
+		if not os.path.exists(dirName):
+			os.mkdir(dirName)
+		with open(dirName + id+".json" , "w") as fw:
+			json.dump(data ,fw)
+		if data["isRestricted"]:
+			#msg = id + " is restricted" + "\n"
+			#fmsg.write(msg)
+			#fmsg.close()
+			#fmsg = open("scrapper.log" , "w+")
+			continue
 		imageUrls = get_image_urls(data)
-		fetchImages(id , baseFolder , imageUrls , data["imageFormat"], head)
+		fetchImages(id , dirName , imageUrls , data["imageFormat"], head )
 		cnt = cnt + 1
 
 main()
+#uploadFolders()
