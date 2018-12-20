@@ -1,6 +1,19 @@
-import os
+from urllib.parse import urlencode
+import urllib.request
 import json
+from os.path import basename
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse
+import logging
+import datetime
+import traceback
+import time
+import sys
+import re
+import os
 import subprocess
+import img2pdf
+
 
 def get_req_header():
 	url = "https://archive.org/details/bdrc-W1KG5905"
@@ -86,7 +99,7 @@ def get_missing_files(folderName , id , head):
 	urls = get_image_urls(data)
 	pageNo = 1
 	for url in urls:
-		file_path = folderName + "page-" + str(pageNo) + "." + imageFormat
+		file_path = folderName + "page-" + str(pageNo) + ".jp2"# + imageFormat
 		pageNo = pageNo + 1
 		if not os.path.isfile(file_path):
 			file_missing = True
@@ -106,7 +119,7 @@ def storePDFFiles( folderName , id ) :
 	for i in range(1 , len(fileNames) + 1):
 		tmp = folderName + "page-" + str(i) + ".jp2"
 		if os.path.isfile(tmp):
-	sortedFileNames.append(tmp)
+			files.append(tmp)
 	noOfParts = int(len(files)/100)
 	if (len(files) % 100) > 0:
 		noOfParts = noOfParts + 1
@@ -120,7 +133,7 @@ def storePDFFiles( folderName , id ) :
 			pdfImgFileNames.append(files[j])
 		print(pdfImgFileNames[0] , pdfImgFileNames[len(pdfImgFileNames) -1])
 		pdf_bytes = img2pdf.convert(pdfImgFileNames )
-		pdfFileName = dirName + id + "-part-"+str(i) + ".pdf"
+		pdfFileName = folderName + id + "-part-"+str(i) + ".pdf"
 		print(pdfFileName )
 		with open(pdfFileName , "wb") as fpdf:
 			fpdf.write(pdf_bytes)
@@ -128,20 +141,10 @@ def storePDFFiles( folderName , id ) :
 		subprocess.call(cmd , shell=True)
 
 def replaceZip(folderName , id , gid):
-	fileNames = []
-	for file in os.listdir(folderName):
-		if file.find(".jp2") > 0:
-			fileNames.append(file)
-	sortedFileNames = []
-        for i in range(1 , len(fileNames) + 1):
-                tmp = folderName + "page-" + str(i) + ".jp2"
-                if os.path.isfile(tmp):
-                        sortedFileNames.append(tmp)
-	storePDFFiles(sortedFileNames , folderName , id)
 	zipCmd = "zip -r " + id + ".zip " + folderName
 	subprocess.call(zipCmd , shell=True)
 	#remove the old zip file
-	cmd = "gdrive delete--parent    " + gid
+	cmd = "gdrive delete     " + gid
 	subprocess.call(cmd , shell=True)
 	cmd = "gdrive upload --parent 1iRJtGw4X-hT-PB7oR9khW270KqIqLC-1    " + id + ".zip"
 	subprocess.call(cmd , shell=True)
@@ -151,23 +154,28 @@ def replaceZip(folderName , id , gid):
 
 def main():
 	head = get_req_header()	
-	res = parse("/root/scrapper/archive_org/budhist/uploaded_files.txt")
+	res = parse("/home/santi_dash_gmail_com/scrapper/archive_org/budhist/uploaded_files.txt")
 	print(len(res.keys()))
 	uploadedEntries = res.keys()
-	baseF = "/home/archive_download/budhist_data/"
+	baseF = "/mnt/disks/budha/data/"
 	fns = os.listdir(baseF)
+	
+
 	for fn in fns:
 		tmp = res.get(fn , None)
 		if tmp is not None:
 			idfn = baseF + fn + "/"
 			if get_missing_files(idfn , fn , head):
 				#re import zip file 
-				replaceZip(idfn,fn,tmp["zipDriveId"])
+				#replaceZip(idfn,fn,tmp["zipDriveId"])
+				pass
 			
 			a = tmp.get("splitPdf" , None)
 			b = tmp.get("pdf" , None)
 			if (not a) and (not b) :
+				print (fn)
 				storePDFFiles( idfn , fn )					
+				pass
 			
 			#cmd = "rm -rf " + "/home/archive_download/budhist_data/" + fn
 			#print(cmd)
