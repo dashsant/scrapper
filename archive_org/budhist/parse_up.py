@@ -79,6 +79,7 @@ def parse(fn):
 				result[key] = v
 			else:
 				v["zip"] = tmp[1]
+				v["zipDriveId"] = tmp[0]
 		elif tmp[1].find(".pdf") > 0:
 			key = tmp[1][:tmp[1].find(".pdf")]
 			v = result.get(key , None)
@@ -143,23 +144,63 @@ def storePDFFiles( folderName , id ) :
 def replaceZip(folderName , id , gid):
 	zipCmd = "zip -r " + id + ".zip " + folderName
 	subprocess.call(zipCmd , shell=True)
-	#remove the old zip file
-	cmd = "gdrive delete     " + gid
-	subprocess.call(cmd , shell=True)
+	#remove the old zip fil
+	if  gid:
+		cmd = "gdrive delete     " + gid
+		subprocess.call(cmd , shell=True)
 	cmd = "gdrive upload --parent 1iRJtGw4X-hT-PB7oR9khW270KqIqLC-1    " + id + ".zip"
 	subprocess.call(cmd , shell=True)
 	rmZipFileCmd = "rm " + id + ".zip"
 	subprocess.call(rmZipFileCmd  , shell=True)
+def getFoldersWithNoZip(res , baseF):
+	fns = os.listdir(baseF)
+	cnt = 1 
+	cnt_ab = 1
+	for fn in fns:
+		tmp = res.get(fn , None)
+		if tmp is not None:
+			c = tmp.get("zipDriveId" , None)
+			if not c:
+				cnt = cnt +1
+				print(tmp)
+			a = tmp.get("splitPdf" , None)
+			b = tmp.get("pdf" , None)
+			if (not a) and (not b) :
+				cnt_ab = cnt_ab + 1
+			elif c:
+				t = baseF + fn
+				cmd = "rm -rf " + t
+				#print(cmd)
+				#subprocess.call(cmd,shell = True)
+			
+	print(cnt , cnt_ab)
 
+def removeUpload(id,res):
+	data = res.get(id)
+	a = data["splitPdf"]
+	b = data["zipDriveId"]
+	for i in a:
+		t = i.split("####")
+		cmd = "gdrive delete " + t[1]
+		print(cmd)
+		subprocess.call(cmd , shell=True)
+	cmd = "gdrive delete " +b
+	print(cmd)
+	subprocess.call(cmd , shell=True)
+	
 
 def main():
 	head = get_req_header()	
 	res = parse("/home/santi_dash_gmail_com/scrapper/archive_org/budhist/uploaded_files.txt")
 	print(len(res.keys()))
+	return
 	uploadedEntries = res.keys()
 	baseF = "/mnt/disks/budha/data/"
 	fns = os.listdir(baseF)
-	
+	#getFoldersWithNoZip(res , baseF)
+	#return
+	#removeUpload( "bdrc-W1CZ888" , res)
+	#return
 
 	for fn in fns:
 		tmp = res.get(fn , None)
@@ -167,8 +208,12 @@ def main():
 			idfn = baseF + fn + "/"
 			if get_missing_files(idfn , fn , head):
 				#re import zip file 
-				#replaceZip(idfn,fn,tmp["zipDriveId"])
+				replaceZip(idfn,fn,tmp["zipDriveId"])
 				pass
+			c = tmp.get("zipDriveId" , None)
+			if not c:
+				print("missing zip for fn " + fn)
+				replaceZip(idfn,fn,None)
 			
 			a = tmp.get("splitPdf" , None)
 			b = tmp.get("pdf" , None)

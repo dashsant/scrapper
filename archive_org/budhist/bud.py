@@ -158,7 +158,7 @@ def main():
 		if cnt > finish :
 			print("finished all")
 			break
-		
+		cnt = cnt + 1	
 		data , head = get_download_metadata(id)
 		dirName = baseFolder + id + "/"
 		if not os.path.exists(dirName):
@@ -173,7 +173,6 @@ def main():
 			continue
 		imageUrls = get_image_urls(data)
 		fetchImages(id , dirName , imageUrls , data["imageFormat"], head )
-		cnt = cnt + 1
 
 main()
 #uploadFolders()
