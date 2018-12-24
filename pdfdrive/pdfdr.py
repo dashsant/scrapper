@@ -25,13 +25,16 @@ def get_meta_data(keyword):
 	urlContent = opn.read()
 	soup = BeautifulSoup(urlContent, "lxml")
 	r = soup.find("div" , {"id":"result-found"})
+	if not r:
+		return []
 	c = r.find("strong")
-	count = int(c.renderContent())
-	print(count)
+	tmp = str(c.contents[0].strip())
+	tmp = tmp.replace("," , "")
+	count = int(tmp)
 	noOfPages = int(count/20)
 	if count%20 > 0:
 		noOfPages = noOfPages + 1
-	metaDiv = soud.find("div" , {"class":"files-new"})
+	metaDiv = soup.find("div" , {"class":"files-new"})
 	metas = []
 	if not metaDiv:
 		print("Meta Not Found : " +  url)
@@ -46,11 +49,12 @@ def get_meta_data(keyword):
 			req = urllib.request.Request(url , headers=head)
 			opn = urllib.request.urlopen(req)
 			urlContent = opn.read()
-			metaDiv = soud.find("div" , {"class":"files-new"})
+			metaDiv = soup.find("div" , {"class":"files-new"})
 			if not metaDiv:
 				print("Meta Not Found : " +  url)
 			else:
 				metas.extend(getMetaDataFromDiv(metaDiv))
+	return metas
 			
 def getMetaDataFromDiv(metaDiv):
 	lis = metaDiv.find_all("li")
@@ -58,34 +62,46 @@ def getMetaDataFromDiv(metaDiv):
 	for li in lis:
 		meta = {}
 		fileR = li.find("div" , {"class":"file-right"})
+		if not fileR:
+			continue
 		t = fileR.find("a")
+		h2 = t.find("h2")
 		title = "NA"
-		if not t:
-			title = t.renderContent()
+		if h2:
+			title = str(h2.contents[0])
 		fileInfo = fileR.find("div" , {"class":"file-info"})
 		p = fileInfo.find("span" , {"class" : "fi-pagecount "})
 		page = "NA"
-		if not p:
-			page = p.renderContent()
+		if p:
+			page = str(p.contents[0])
+			
 		y = fileInfo.find("span" , {"class" : "fi-year "})
 		year = "NA"
-		if not y:
-			year = y.renderContent()
+	
+		if  y:
+			year = str(y.contents[0])
 		meta["title"] = title
 		meta["page"] = page
 		meta["year"] = year
 		metas.append(meta)
-	return metas
+			
+	return metas 
 
 def main():
 	f = open("keywords.txt" , "r")
-	w = open("metas.csv" , "w")
-	for keyword in f:
+	keywordline = f.read()
+	karr = keywordline.split(",")
+	for keyword in karr:
+		keyword = keyword.strip()
+		w = open(keyword+".csv" , "w")
 		metas = get_meta_data(keyword)
 		for meta in metas:
-
+			line = meta["title"] + "\t" +  meta["page"] + "\t" + meta["year"]	
+			w.write(line)
+			w.write("\n")
+		w.close()
+		print("Completed for keywor " + keyword )
 	f.close()
-	w.close()
 	
 	
 main()
