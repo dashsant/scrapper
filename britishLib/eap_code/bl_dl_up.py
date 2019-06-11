@@ -6,8 +6,8 @@ import time
 
 def upload_to_wasabi(f , file_key):
 
-    WASABI_ACCESS_KEY = 'XDD3268UILFWROHD11Q8'
-    WASABI_SECRET_KEY = 'fCQATKvQwheleOZJ5FTW0gvMHOyNzwb8bk4YYLve'
+    WASABI_ACCESS_KEY = ''
+    WASABI_SECRET_KEY = ''
     WASABI_BUCKET = 'nithya.bl'
     # Open the file as readable
     body = open(f, 'rb')

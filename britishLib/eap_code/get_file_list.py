@@ -6,8 +6,8 @@ import time
 
 def get_client( ):
 
-    WASABI_ACCESS_KEY = 'XDD3268UILFWROHD11Q8'
-    WASABI_SECRET_KEY = 'fCQATKvQwheleOZJ5FTW0gvMHOyNzwb8bk4YYLve'
+    WASABI_ACCESS_KEY = ''
+    WASABI_SECRET_KEY = ''
     WASABI_BUCKET = 'nithya.bl'
     s3 = boto3_wasabi.client('s3', region_name='us-east-1' ,aws_access_key_id=WASABI_ACCESS_KEY, aws_secret_access_key=WASABI_SECRET_KEY)
     return s3
